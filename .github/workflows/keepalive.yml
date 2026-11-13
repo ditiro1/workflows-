@@ -19,7 +19,7 @@ jobs:
         run: |
           http_code=$(curl -s -o response.json -w "%{http_code}" \
             -H "X-Api-Key: ${{ secrets.MT5_API_KEY }}" \
-            "https://https://www.lakeinnfeedlot.com/api/public/mt5/logs?since=0")
+            "https://www.lakeinnfeedlot.com/api/public/mt5/ticks?since=0")
 
           echo "HTTP status: $http_code"
           cat response.json
@@ -28,3 +28,6 @@ jobs:
             echo "::error::Keep-alive ping failed with status $http_code"
             exit 1
           fi
+
+
+           
