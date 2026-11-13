@@ -19,7 +19,7 @@ jobs:
         run: |
           http_code=$(curl -s -o response.json -w "%{http_code}" \
             -H "X-Api-Key: ${{ secrets.MT5_API_KEY }}" \
-            "www.lakeinnfeedlot.com/api/public/mt5/ticks?since=0")
+            "https://www.lakeinnfeedlot.com/api/public/mt5/ticks?since=0")
 
           echo "HTTP status: $http_code"
           cat response.json
