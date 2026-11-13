@@ -30,4 +30,4 @@ jobs:
           fi
 
 
-           curl.exe -i -H "X-Api-Key: ***********awaZ" "https://www.lakeinnfeedlot.com/api/public/mt5/logs?since=0"
+           #curl.exe -i -H "X-Api-Key: ***********awaZ" "https://www.lakeinnfeedlot.com/api/public/mt5/logs?since=0"
