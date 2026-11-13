@@ -1,61 +1,41 @@
-
 name: Supabase Keep-Alive Ping
-
-# Sends a real API request every two days
-# to prevent Supabase inactivity pausing.
 
 on:
   schedule:
-    - cron: "0 9 */2 * *"
+    - cron: "0 9 * * *"      # daily at 09:00 UTC (safer than every 2 days)
   workflow_dispatch: {}
 
 jobs:
   ping:
     runs-on: ubuntu-24.04
-
+    timeout-minutes: 5
     steps:
-      - name: Ping Lakeinn Feedlot MT5 API
+      - name: Ping /api/public/mt5/logs
         env:
-          MT5_API_KEY: ${{ secrets.MT5_API_KEY }}
-
+          API_KEY: ${{ secrets.MT5_API_KEY }}
         run: |
-          set +e
-
-          echo "Starting Supabase Keep-Alive Ping..."
-
-          http_code=$(curl \
-            --silent \
-            --show-error \
-            --location \
-            --connect-timeout 15 \
-            --max-time 45 \
-            -o response.json \
-            -w "%{http_code}" \
-            -H "X-Api-Key: $MT5_API_KEY" \
-            "https://www.lakeinnfeedlot.com/api/public/mt5/logs?since=0")
-
-          curl_exit=$?
-
-          echo "Curl exit code: $curl_exit"
-          echo "HTTP status: $http_code"
-
-          if [ -f response.json ]; then
-            echo "API response:"
-            head -c 4000 response.json
-            echo
-          fi
-
-          if [ "$curl_exit" -ne 0 ]; then
-            echo "::error::API connection failed"
+          if [ -z "$API_KEY" ]; then
+            echo "::error::Secret MT5_API_KEY is empty or not set as a repository secret"
             exit 1
           fi
 
-          if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
-            echo "::error::API returned HTTP $http_code"
-            exit 1
-          fi
+          for attempt in 1 2 3 4 5; do
+            http_code=$(curl -s -o response.json -w "%{http_code}" \
+              --max-time 30 \
+              -A "github-actions-keepalive/1.0" \
+              -H "X-Api-Key: $API_KEY" \
+              "https://www.lakeinnfeedlot.com/api/public/mt5/logs?since=0") || http_code=000
 
-          echo "Supabase Keep-Alive Ping successful!"
-r::Keep-alive ping failed with status $http_code"
-            exit 1
-          fi
+            echo "Attempt $attempt: HTTP status $http_code"
+
+            if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
+              echo "Keep-alive ping succeeded"
+              exit 0
+            fi
+
+            head -c 500 response.json 2>/dev/null; echo
+            sleep 20
+          done
+
+          echo "::error::Keep-alive ping failed after 5 attempts (last status $http_code)"
+          exit 1
