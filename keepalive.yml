@@ -1,0 +1,27 @@
+name: Supabase Keep-Alive Ping
+
+on:
+  schedule:
+    - cron: "0 9 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Ping /api/public/mt5/logs
+        env:
+          RAW_KEY: ${{ secrets.MT5_API_KEY }}
+        run: |
+          API_KEY=$(printf '%s' "$RAW_KEY" | tr -d '[:space:]"'"'"'')
+          echo "Key length: ${#API_KEY} (raw: ${#RAW_KEY})"
+          http_code=$(curl -s -o response.json -w "%{http_code}" --max-time 30 \
+            -H "X-Api-Key: $API_KEY" \
+            "https://www.lakeinnfeedlot.com/api/public/mt5/logs?since=0")
+          echo "HTTP status: $http_code"
+          head -c 300 response.json; echo
+          if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
+            echo "::error::Keep-alive ping failed with status $http_code"
+            exit 1
+          fi
